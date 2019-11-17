@@ -1,44 +1,38 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
+using HugHub.PriceEngine.Models;
+using HugHub.PriceEngine.Models.Extensions;
 
 namespace ConsoleApp1
 {
     class Program
     {
-        static void Main(string[] args)
+        static async Task Main(string[] args)
         {
-            //SNIP - collect input (risk data from the user)
+            DateTime? DOB = null;
+            decimal? value = null;
 
-            var request = new PriceRequest()
+            if (DateTime.TryParse(args[4], out var parsedDOB)) DOB = parsedDOB;
+            if (decimal.TryParse(args[3], out var parsedValue)) value = parsedValue;
+            
+            var request = new PriceRequest
             {
-                RiskData = new RiskData() //hardcoded here, but would normally be from user input above
+                RiskData = new RiskData //hardcoded here, but would normally be from user input above
                 {
-                    DOB = DateTime.Parse("1980-01-01"),
-                    FirstName = "John",
-                    LastName = "Smith",
-                    Make = "Cool New Phone",
-                    Value = 500
+                    DOB = DOB,
+                    FirstName = args[0],
+                    LastName = args[1],
+                    Make = args[2],
+                    Value = value 
                 }
             };
 
-            decimal tax = 0;
-            string insurer = "";
-            string error = "";
+            var priceEngine = DIContainer.ResolvePriceEngine();
+            var price = await priceEngine.GetPrice(request);
 
-            var priceEngine = new PriceEngine();
-            var price = priceEngine.GetPrice(request, out tax, out insurer, out error);
-
-            if (price == -1)
-            {
-                Console.WriteLine(String.Format("There was an error - {0}", error));
-            }
-            else
-            {
-                Console.WriteLine(String.Format("You price is {0}, from insurer: {1}. This includes tax of {2}", price, insurer, tax));
-            }
+            Console.WriteLine(!price.Success
+                ? $"There was an error - {price.SquashErrors()}"
+                : $"You price is {price.Value.Price}, from insurer: {price.Value.InsurerName}. This includes tax of {price.Value.Tax}");
 
             Console.WriteLine("Press any key to exit");
             Console.ReadKey();
